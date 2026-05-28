@@ -16,6 +16,46 @@
         "provinsiLabel": {
           "value": "Sumatera Utara"
         }
+      },      
+      {
+        "tempatLahirQid": {
+          "value": "Q1948643"
+        },
+        "provinsiLabel": {
+          "value": "Kepulauan Bangka Belitung"
+        }
+      },
+      {
+        "tempatLahirQid": {
+          "value": "Q9634912"
+        },
+        "provinsiLabel": {
+          "value": "Aceh"
+        }
+      },
+      {
+        "tempatLahirQid": {
+          "value": "Q8136"
+        },
+        "provinsiLabel": {
+          "value": "Lampung"
+        }
+      },
+      {
+        "tempatLahirQid": {
+          "value": "Q12499972"
+        },
+        "provinsiLabel": {
+          "value": "Nusa Tenggara Timur"
+        }
+      },
+      {
+        "tempatLahirQid": {
+          "value": "Q14622"
+        },
+        "provinsiLabel": {
+          "value": "Sulawesi Selatan"
+        }
       },
       {
         "tempatLahirQid": {
@@ -1899,14 +1939,6 @@
       },
       {
         "tempatLahirQid": {
-          "value": "Q1886233"
-        },
-        "provinsiLabel": {
-          "value": "Sulawesi Selatan"
-        }
-      },
-      {
-        "tempatLahirQid": {
           "value": "Q1632717"
         },
         "provinsiLabel": {
@@ -3764,14 +3796,6 @@
       {
         "tempatLahirQid": {
           "value": "Q14619"
-        },
-        "provinsiLabel": {
-          "value": "Sulawesi Selatan"
-        }
-      },
-      {
-        "tempatLahirQid": {
-          "value": "Q14622"
         },
         "provinsiLabel": {
           "value": "Sulawesi Selatan"
@@ -11727,14 +11751,6 @@
     },
     "provinsiLabel": {
       "value": "Sulawesi Tengah"
-    }
-  },
-  {
-    "tempatLahirQid": {
-      "value": "Q14622"
-    },
-    "provinsiLabel": {
-      "value": "Sulawesi Selatan"
     }
   },
   {
