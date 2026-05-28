@@ -33,12 +33,10 @@ function loadPrimaryData() {
         if (!(qid in Records)) Records[qid] = new Record();
         let record = Records[qid];
 
-        // Nama & Tempat Lahir
         record.title = result.siteLabel ? result.siteLabel.value : `Tokoh (${qid})`;
         record.indexTitle = record.title;
         if (result.tempatLahirUrl) record.tempatLahirQid = result.tempatLahirUrl.value.split('/').pop();
 
-        // Koordinat
         if (result.coord) {
           let wktBits = result.coord.value.split(/\(|\)| /);
           if (wktBits.length >= 3) {
@@ -47,17 +45,14 @@ function loadPrimaryData() {
           }
         }
 
-        // Foto & Wikipedia
         if (result.image && !record.imageFilename) record.imageFilename = extractImageFilename(result.image);
         if (result.wikiTitle) record.articleTitle = decodeURIComponent(result.wikiTitle.value);
 
-        // Demografi (Gender)
         if (result.genderUrl) {
            let genderQid = result.genderUrl.value.split('/').pop();
            if (KAMUS_GENDER[genderQid]) record.jenisKelamin = KAMUS_GENDER[genderQid];
         }
 
-        // Pekerjaan Ganda
         if (result.pekerjaanList) {
            let jobs = result.pekerjaanList.value.split(',');
            jobs.forEach(jobUrl => {
@@ -66,17 +61,14 @@ function loadPrimaryData() {
            });
         }
 
-        // Membaca Provinsi dari JSON (Jika ada)
         if (result.provinsiLabel && record.tempatLahirQid) {
           PetaProvinsi[record.tempatLahirQid] = result.provinsiLabel.value;
         }
       });
 
-      // Panggil sistem penyicil provinsi
       return populateProvinceMapping();
     })
     .then(() => {
-      // Setelah provinsi selesai dicicil, bangun peta
       BootstrapDataIsLoaded = true;
       buildDynamicIndices();
       populateMapAndIndex();
@@ -85,9 +77,8 @@ function loadPrimaryData() {
     })
     .catch(error => {
       console.error("FATAL ERROR:", error);
-      alert("Sistem Darurat: Menampilkan peta tanpa filter provinsi karena koneksi lambat/error (" + error.message + ").");
+      alert("Sistem Darurat: Menampilkan peta tanpa filter provinsi (" + error.message + ").");
       
-      // SISTEM DARURAT: Tetap panggil fungsi perenderan agar tidak macet di loading
       BootstrapDataIsLoaded = true;
       buildDynamicIndices();
       populateMapAndIndex();
@@ -96,7 +87,7 @@ function loadPrimaryData() {
     });
 }
 
-// 3. Fungsi Penyicil Provinsi (Metode GET agar tidak diblokir browser)
+// 3. Fungsi Penyicil Provinsi
 function populateProvinceMapping() {
   let tempatLahirSet = new Set();
 
@@ -110,7 +101,6 @@ function populateProvinceMapping() {
 
   let qids = Array.from(tempatLahirSet);
   let chunks = [];
-  // Paket diturunkan menjadi 100 agar URL tidak kepanjangan
   for (let i = 0; i < qids.length; i += 100) {
       chunks.push(qids.slice(i, i + 100));
   }
@@ -442,7 +432,7 @@ function activateSite(qid) {
       function() {
         Map.setView([record.lat, record.lon], Map.getZoom());
         if (!record.popup.isOpen()) record.mapMarker.openPopup();
-      },
+      } // <--- KOMANYA SUDAH SAYA BUANG DI SINI
     );
   }
 }
