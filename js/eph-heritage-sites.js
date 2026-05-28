@@ -2,6 +2,7 @@
 
 let currentFilterMode = 'union';
 let currentRegionFilter = 'all';
+let currentGenderFilter = 'all'; // <--- [BARU] Variabel untuk filter jenis kelamin
 let activePekerjaan = new Set();
 let PekerjaanButtons = {};
 
@@ -206,6 +207,7 @@ function populateMapAndIndex() {
 // 6. Pembuat Filter Dinamis UI
 function generateFilterSelect() {
   let selectRegion = document.getElementById('filter-region');
+  let selectGender = document.getElementById('filter-gender'); // <--- [BARU] Menangkap elemen select gender
   let containerPekerjaan = document.getElementById('filter-pekerjaan-buttons');
   let btnAllPekerjaan = document.getElementById('btn-all-pekerjaan');
 
@@ -238,6 +240,16 @@ function generateFilterSelect() {
 
     selectRegion.addEventListener('change', function() {
       currentRegionFilter = this.value;
+      updateFeatureCounts();
+      applyIntersectionFilter();
+      this.blur();
+    });
+  }
+
+  // <--- [BARU] Event Listener untuk Filter Jenis Kelamin
+  if(selectGender) {
+    selectGender.addEventListener('change', function() {
+      currentGenderFilter = this.value;
       updateFeatureCounts();
       applyIntersectionFilter();
       this.blur();
@@ -324,7 +336,16 @@ function updateFeatureCounts() {
         matchRegion = record.areaTags.has(currentRegionFilter);
     }
 
-    if (matchRegion) {
+    // <--- [BARU] Logika pencocokan Jenis Kelamin
+    let matchGender = false;
+    if (currentGenderFilter === 'all') {
+        matchGender = true;
+    } else if (currentGenderFilter === record.jenisKelamin) {
+        matchGender = true;
+    }
+
+    // Hanya hitung jika Region dan Gender sama-sama cocok
+    if (matchRegion && matchGender) {
       record.pekerjaan.forEach(pkj => {
         if (tempJobCounts[pkj] !== undefined) {
           tempJobCounts[pkj]++;
@@ -392,8 +413,15 @@ function applyIntersectionFilter() {
         matchRegion = record.areaTags.has(currentRegionFilter);
     }
 
-    let matchPekerjaan = true;
+    // <--- [BARU] Penyaring Jenis Kelamin
+    let matchGender = false;
+    if (currentGenderFilter === 'all') {
+        matchGender = true;
+    } else if (currentGenderFilter === record.jenisKelamin) {
+        matchGender = true;
+    }
 
+    let matchPekerjaan = true;
     if (activePekerjaan.size > 0) {
       if (currentFilterMode === 'union') {
         matchPekerjaan = Array.from(activePekerjaan).some(pkj => record.pekerjaan.has(pkj));
@@ -402,7 +430,8 @@ function applyIntersectionFilter() {
       }
     }
 
-    return matchRegion && matchPekerjaan;
+    // Filter final mewajibkan Region, Gender, dan Pekerjaan sesuai
+    return matchRegion && matchGender && matchPekerjaan;
   }).sort((a, b) => {
     return a.indexTitle.localeCompare(b.indexTitle);
   });
@@ -432,7 +461,7 @@ function activateSite(qid) {
       function() {
         Map.setView([record.lat, record.lon], Map.getZoom());
         if (!record.popup.isOpen()) record.mapMarker.openPopup();
-      } // <--- KOMANYA SUDAH SAYA BUANG DI SINI
+      }
     );
   }
 }
