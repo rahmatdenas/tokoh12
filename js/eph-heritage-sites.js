@@ -13,128 +13,94 @@ function doPreProcessing() {
   processHashChange();
 }
 
-// 2. Fungsi Pemuat Utama (Anti-Macet)
+// 2. Fungsi Pemuat Utama (Super Cepat dengan File Lokal)
 function loadPrimaryData() {
   doPreProcessing();
 
-  fetch('data-tokoh.json')
-    .then(response => {
-        if (!response.ok) throw new Error("File 'data-tokoh.json' tidak ditemukan di folder Anda.");
-        return response.json();
+  // Membaca kedua file JSON secara serentak (paralel) agar sangat cepat
+  Promise.all([
+    fetch('peta-provinsi.json').then(res => {
+        if (!res.ok) throw new Error("File 'peta-provinsi.json' tidak ditemukan.");
+        return res.json();
+    }),
+    fetch('data-tokoh.json').then(res => {
+        if (!res.ok) throw new Error("File 'data-tokoh.json' tidak ditemukan.");
+        return res.json();
     })
-    .then(data => {
-      if (!data || !data.results || !data.results.bindings) {
-          throw new Error("Format JSON salah!");
+  ])
+  .then(([dataProvinsi, dataTokoh]) => {
+    // A. Menyusun kamus provinsi dari file yang baru Anda unduh
+    if (dataProvinsi && dataProvinsi.results && dataProvinsi.results.bindings) {
+       dataProvinsi.results.bindings.forEach(row => {
+           if (row.tempatLahirQid && row.provinsiLabel) {
+               PetaProvinsi[row.tempatLahirQid.value] = row.provinsiLabel.value;
+           }
+       });
+    }
+
+    // B. Mengeksekusi 21.000 data tokoh utama
+    if (!dataTokoh || !dataTokoh.results || !dataTokoh.results.bindings) {
+       throw new Error("Format JSON Tokoh salah!");
+    }
+
+    dataTokoh.results.bindings.forEach(result => {
+      if (!result.site || !result.site.value) return;
+
+      let qid = result.site.value.split('/').pop();
+      if (!(qid in Records)) Records[qid] = new Record();
+      let record = Records[qid];
+
+      record.title = result.siteLabel ? result.siteLabel.value : `Tokoh (${qid})`;
+      record.indexTitle = record.title;
+      if (result.tempatLahirUrl) record.tempatLahirQid = result.tempatLahirUrl.value.split('/').pop();
+
+      if (result.coord) {
+        let wktBits = result.coord.value.split(/\(|\)| /);
+        if (wktBits.length >= 3) {
+            record.lat = parseFloat(wktBits[2]);
+            record.lon = parseFloat(wktBits[1]);
+        }
       }
 
-      data.results.bindings.forEach(result => {
-        if (!result.site || !result.site.value) return;
+      if (result.image && !record.imageFilename && typeof extractImageFilename === 'function') {
+         record.imageFilename = extractImageFilename(result.image);
+      }
+      if (result.wikiTitle) record.articleTitle = decodeURIComponent(result.wikiTitle.value);
 
-        let qid = result.site.value.split('/').pop();
-        if (!(qid in Records)) Records[qid] = new Record();
-        let record = Records[qid];
+      if (result.genderUrl) {
+         let genderQid = result.genderUrl.value.split('/').pop();
+         if (typeof KAMUS_GENDER !== 'undefined' && KAMUS_GENDER[genderQid]) {
+            record.jenisKelamin = KAMUS_GENDER[genderQid];
+         }
+      }
 
-        record.title = result.siteLabel ? result.siteLabel.value : `Tokoh (${qid})`;
-        record.indexTitle = record.title;
-        if (result.tempatLahirUrl) record.tempatLahirQid = result.tempatLahirUrl.value.split('/').pop();
-
-        if (result.coord) {
-          let wktBits = result.coord.value.split(/\(|\)| /);
-          if (wktBits.length >= 3) {
-              record.lat = parseFloat(wktBits[2]);
-              record.lon = parseFloat(wktBits[1]);
-          }
-        }
-
-        if (result.image && !record.imageFilename) record.imageFilename = extractImageFilename(result.image);
-        if (result.wikiTitle) record.articleTitle = decodeURIComponent(result.wikiTitle.value);
-
-        if (result.genderUrl) {
-           let genderQid = result.genderUrl.value.split('/').pop();
-           if (KAMUS_GENDER[genderQid]) record.jenisKelamin = KAMUS_GENDER[genderQid];
-        }
-
-        if (result.pekerjaanList) {
-           let jobs = result.pekerjaanList.value.split(',');
-           jobs.forEach(jobUrl => {
-               let jobQid = jobUrl.split('/').pop();
-               if (KAMUS_PEKERJAAN[jobQid]) record.pekerjaan.add(KAMUS_PEKERJAAN[jobQid]);
-           });
-        }
-
-        if (result.provinsiLabel && record.tempatLahirQid) {
-          PetaProvinsi[record.tempatLahirQid] = result.provinsiLabel.value;
-        }
-      });
-
-      return populateProvinceMapping();
-    })
-    .then(() => {
-      BootstrapDataIsLoaded = true;
-      buildDynamicIndices();
-      populateMapAndIndex();
-      updateFeatureCounts();
-      enableApp();
-    })
-    .catch(error => {
-      console.error("FATAL ERROR:", error);
-      alert("Sistem Darurat: Menampilkan peta tanpa filter provinsi (" + error.message + ").");
+      if (result.pekerjaanList) {
+         let jobs = result.pekerjaanList.value.split(',');
+         jobs.forEach(jobUrl => {
+             let jobQid = jobUrl.split('/').pop();
+             if (typeof KAMUS_PEKERJAAN !== 'undefined' && KAMUS_PEKERJAAN[jobQid]) {
+                record.pekerjaan.add(KAMUS_PEKERJAAN[jobQid]);
+             }
+         });
+      }
       
-      BootstrapDataIsLoaded = true;
-      buildDynamicIndices();
-      populateMapAndIndex();
-      updateFeatureCounts();
-      enableApp();
+      // Jika JSON tokoh kebetulan sudah membawa label provinsinya sendiri, gabungkan
+      if (result.provinsiLabel && record.tempatLahirQid) {
+         PetaProvinsi[record.tempatLahirQid] = result.provinsiLabel.value;
+      }
     });
-}
 
-// 3. Fungsi Penyicil Provinsi
-function populateProvinceMapping() {
-  let tempatLahirSet = new Set();
-
-  Object.values(Records).forEach(r => {
-    if (r.tempatLahirQid && !PetaProvinsi[r.tempatLahirQid]) {
-        tempatLahirSet.add(r.tempatLahirQid);
-    }
+    // C. Data selesai, bangun peta dan matikan layar loading
+    BootstrapDataIsLoaded = true;
+    buildDynamicIndices();
+    populateMapAndIndex();
+    updateFeatureCounts();
+    if (typeof enableApp === 'function') enableApp();
+  })
+  .catch(error => {
+    console.error("Kesalahan Sistem:", error);
+    alert("Gagal memuat data: " + error.message);
   });
-
-  if (tempatLahirSet.size === 0) return Promise.resolve();
-
-  let qids = Array.from(tempatLahirSet);
-  let chunks = [];
-  for (let i = 0; i < qids.length; i += 100) {
-      chunks.push(qids.slice(i, i + 100));
-  }
-
-  let chain = Promise.resolve();
-  chunks.forEach((chunk) => {
-      chain = chain.then(() => {
-          let valuesClause = 'VALUES ?tempatLahir { ' + chunk.map(qid => `wd:${qid}`).join(' ') + ' }';
-          let query = `SELECT DISTINCT ?tempatLahirQid ?provinsiLabel WHERE {
-            VALUES ?provinsi { wd:Q1823 wd:Q3125978 wd:Q3540 wd:Q1890 wd:Q3741 wd:Q3630 wd:Q5067 wd:Q2051 wd:Q3724 wd:Q3557 wd:Q3586 wd:Q3916 wd:Q3906 wd:Q3891 wd:Q3899 wd:Q3903 wd:Q1866 wd:Q2223 wd:Q2110 wd:Q5093 wd:Q5094 wd:Q5062 wd:Q5061 wd:Q5095 wd:Q5096 wd:Q115253263 wd:Q112810104 wd:Q61439296 wd:Q12486766 wd:Q2175 wd:Q5082 wd:Q5078 wd:Q5065 wd:Q5075 wd:Q5068 wd:Q2772 wd:Q2271 wd:Q2140 }
-            ${valuesClause}
-            ?tempatLahir wdt:P131* ?provinsi .
-            ?provinsi rdfs:label ?provLabel .
-            FILTER(LANG(?provLabel) = "id")
-            BIND (SUBSTR(STR(?tempatLahir), 32) AS ?tempatLahirQid) .
-            BIND (STR(?provLabel) AS ?provinsiLabel) .
-          }`;
-
-          let url = 'https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(query) + '&origin=*';
-          return fetch(url)
-          .then(res => res.json())
-          .then(data => {
-              if(data && data.results && data.results.bindings) {
-                  data.results.bindings.forEach(result => {
-                      PetaProvinsi[result.tempatLahirQid.value] = result.provinsiLabel.value;
-                  });
-              }
-          })
-          .catch(err => console.log("Gagal menyicil provinsi:", err));
-      });
-  });
-
-  return chain;
 }
 
 // 4. Pembangun Indeks
