@@ -562,8 +562,8 @@ function generateRecordDetails(qid) {
 
   let pkjEl = panelElem.querySelector(`#pekerjaan-${qid}`);
             if (pkjEl) {
-                let tautanSunting = ` <a href="https://www.wikidata.org/wiki/${qid}#P106" target="_blank" style="font-size: 0.85em; text-decoration: none;" title="Sunting pekerjaan di Wikidata">[sunting]</a>`;
-                 if (daftarLabelPekerjaan.length > 0) {
+let tautanSunting = ` <a href="https://www.wikidata.org/wiki/${qid}#P106" target="_blank" class="sunting-link" title="Sunting pekerjaan di Wikidata">[sunting]</a>`;
+              if (daftarLabelPekerjaan.length > 0) {
                     const formatter = new Intl.ListFormat('id-ID', { style: 'long', type: 'conjunction' });
                     pkjEl.innerHTML = formatter.format(daftarLabelPekerjaan) + tautanSunting;
                 } else {
