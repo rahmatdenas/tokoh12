@@ -16,6 +16,14 @@
         "provinsiLabel": {
           "value": "Sumatera Utara"
         }
+      },   
+      {
+        "tempatLahirQid": {
+          "value": "Q12459595"
+        },
+        "provinsiLabel": {
+          "value": "Sumatera Barat"
+        }
       },      
       {
         "tempatLahirQid": {
