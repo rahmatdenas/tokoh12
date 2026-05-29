@@ -52,8 +52,8 @@ const KAMUS_PEKERJAAN = {
 
 // KAMUS PENERJEMAH GENDER
 const KAMUS_GENDER = {
-  'Q6581097': 'Laki-laki', 
-  'Q6581072': 'Perempuan'
+  'Q6581097': 'laki-laki', 
+  'Q6581072': 'perempuan'
 };
 
 const ABOUT_SPARQL_QUERY = ``;
