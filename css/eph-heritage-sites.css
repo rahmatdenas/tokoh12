@@ -147,19 +147,24 @@ optgroup option {
 
 #details .sunting-link {
   text-decoration: none;
-  color: #a22;
-  padding: 0 4px;
-  border-radius: 2px;
+  color: #888;
+  font-style: italic;
+  padding: 0 4px;        
+  border-radius: 2px;    
 }
-
 #details .sunting-link:hover {
-  background: #eee; 
+  background: #eee;
+  color: #555;
 }
 
 #details .designations {
   margin: 10px 0 0 0;
   padding: 0;
-  overflow: hidden;  /* TAMBAHAN BARU: Memaksa UL menghormati batas gambar */
+  overflow: hidden;
+}
+
+#details .designations p strong {
+  padding-right: 5px;
 }
 
 #details .designations li {
