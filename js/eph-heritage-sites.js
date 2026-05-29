@@ -69,13 +69,17 @@ function loadPrimaryData() {
             record.jenisKelamin = KAMUS_GENDER[genderQid];
          }
       }
-
-      if (result.pekerjaanList) {
+if (result.pekerjaanList) {
          let jobs = result.pekerjaanList.value.split(',');
+         
+         record.pekerjaanQids = new Set(); 
+         
          jobs.forEach(jobUrl => {
              let jobQid = jobUrl.split('/').pop();
+             record.pekerjaanQids.add(jobQid); 
+             
              if (typeof KAMUS_PEKERJAAN !== 'undefined' && KAMUS_PEKERJAAN[jobQid]) {
-                record.pekerjaan.add(KAMUS_PEKERJAAN[jobQid]);
+                record.pekerjaan.add(KAMUS_PEKERJAAN[jobQid]); // Filter tetap aman
              }
          });
       }
@@ -460,9 +464,9 @@ function generateRecordDetails(qid) {
 
   if (record.jenisKelamin) infoHtml += `<li><p><strong>Jenis Kelamin:</strong> ${record.jenisKelamin}</p></li>`;
 
-  if (record.pekerjaan.size > 0) {
-    let pkjList = Array.from(record.pekerjaan).join(', ');
-    infoHtml += `<li><p><strong>Pekerjaan:</strong> ${pkjList}</p></li>`;
+// PERUBAHAN: Jadikan placeholder span seperti tempat lahir
+  if (record.pekerjaanQids && record.pekerjaanQids.size > 0) {
+    infoHtml += `<li><p><strong>Pekerjaan:</strong> <span id="pekerjaan-${qid}">Memuat pekerjaan...</span></p></li>`;
   }
   infoHtml += '</ul>';
 
@@ -473,9 +477,16 @@ function generateRecordDetails(qid) {
     titleHtml + figureHtml + articleHtml + infoHtml;
 
   record.panelElem = panelElem;
-
+// Gabungkan ID tokoh dan ID tempat lahir
   let queryIds = qid;
   if (record.tempatLahirQid) queryIds += `|${record.tempatLahirQid}`;
+
+  // TAMBAHAN: Gabungkan semua Q-ID pekerjaan
+  let arrPekerjaanQid = [];
+  if (record.pekerjaanQids && record.pekerjaanQids.size > 0) {
+      arrPekerjaanQid = Array.from(record.pekerjaanQids);
+      queryIds += `|${arrPekerjaanQid.join('|')}`;
+  }
 
   fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${queryIds}&props=labels|sitelinks&languages=id|en&format=json&origin=*`)
     .then(res => res.json())
@@ -483,8 +494,7 @@ function generateRecordDetails(qid) {
         let entPerson = data.entities[qid];
         if (entPerson) {
           let realName = entPerson.labels.id ? entPerson.labels.id.value : (entPerson.labels.en ? entPerson.labels.en.value : qid);
-
-          let headerEl = document.getElementById(`title-header-${qid}`);
+          let headerEl = panelElem.querySelector(`#title-header-${qid}`);
           if(headerEl) headerEl.textContent = realName;
 
           let idxEl = document.getElementById(`idx-${qid}`);
@@ -508,9 +518,34 @@ function generateRecordDetails(qid) {
           let entCity = data.entities[record.tempatLahirQid];
           if (entCity) {
             let cityName = entCity.labels.id ? entCity.labels.id.value : (entCity.labels.en ? entCity.labels.en.value : record.tempatLahirQid);
-            let lokEl = document.getElementById(`lokasi-${qid}`);
+            let lokEl = panelElem.querySelector(`#lokasi-${qid}`);
             if(lokEl) lokEl.textContent = cityName;
           }
+        }
+
+        // TAMBAHAN: Render label pekerjaan dari Wikidata
+        if (arrPekerjaanQid.length > 0) {
+            let daftarLabelPekerjaan = [];
+            
+            arrPekerjaanQid.forEach(pkjQid => {
+                let entPkj = data.entities[pkjQid];
+                if (entPkj) {
+                    let labelPkj = entPkj.labels.id ? entPkj.labels.id.value : (entPkj.labels.en ? entPkj.labels.en.value : null);
+                    // Fallback ke kamus jika Wikidata tidak punya label
+                    if (!labelPkj && KAMUS_PEKERJAAN[pkjQid]) labelPkj = KAMUS_PEKERJAAN[pkjQid];
+                    if (labelPkj) daftarLabelPekerjaan.push(labelPkj);
+                } else if (KAMUS_PEKERJAAN[pkjQid]) {
+                    daftarLabelPekerjaan.push(KAMUS_PEKERJAAN[pkjQid]);
+                }
+            });
+
+            let pkjEl = panelElem.querySelector(`#pekerjaan-${qid}`);
+            if (pkjEl && daftarLabelPekerjaan.length > 0) {
+                pkjEl.textContent = daftarLabelPekerjaan.join(', ');
+            } else if (pkjEl) {
+                // Fallback terakhir: gunakan isi record.pekerjaan asli jika fetch gagal total
+                pkjEl.textContent = Array.from(record.pekerjaan).join(', ');
+            }
         }
     })
     .catch(err => console.log("Gagal memuat API dari Wikidata", err));
